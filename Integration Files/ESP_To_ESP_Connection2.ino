@@ -3,7 +3,7 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
-// Broadcast address (sends to all ESP-NOW devices listening)
+// MAC Address of Receiving ESP 32
 uint8_t broadcastAddress[] = {0x14, 0x33, 0x5c, 0x0a, 0x48, 0x2c};  // MAC Address of ESP labeled "1"
 
 // Define message structure
