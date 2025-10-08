@@ -90,7 +90,7 @@ void loop() {
   lox2.rangingTest(&measure2, false);
   if (measure2.RangeStatus != 4) {
     if (measure2.RangeMilliMeter <= 50) {
-      Serial.println("Sensor 2: DETECT");
+      Serial.println("Sensor 2: DETECT"); 
     } else {
       Serial.println("Sensor 2: clear");
     }
