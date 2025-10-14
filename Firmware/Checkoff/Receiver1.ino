@@ -103,8 +103,8 @@ void tryFinalizeImage(ImageBuffer &ib, const uint8_t *senderMac) {
 
   if (ib.received_chunks != ib.total_chunks) {
     // incomplete - drop and reset
-    // Serial.printf("Incomplete image %u from %s (have %u / %u). Dropping.\n",
-   //               ib.img_id, macToHex(senderMac).c_str(), ib.received_chunks, ib.total_chunks);
+    Serial.printf("Incomplete image %u from %s (have %u / %u). Dropping.\n",
+                  ib.img_id, macToHex(senderMac).c_str(), ib.received_chunks, ib.total_chunks);
     ib.reset();
     return;
   }
@@ -122,18 +122,18 @@ void tryFinalizeImage(ImageBuffer &ib, const uint8_t *senderMac) {
   header += ":";
   header += String((unsigned long)totalSize);
   header += ">\n";
-  // Serial.print(header);
+  Serial.print(header);
 
   // Write binary image
   for (uint16_t i = 0; i < ib.total_chunks; ++i) {
     if (ib.chunks[i].len > 0 && ib.chunks[i].data) {
-      // Serial.write(ib.chunks[i].data, ib.chunks[i].len);
+      Serial.write(ib.chunks[i].data, ib.chunks[i].len);
     }
   }
 
   // Send end marker
-  // Serial.print("\n<IMG_END>\n");
-  // Serial.printf("Image %u from %s forwarded (size=%u bytes)\n", ib.img_id, macToHex(senderMac).c_str(), (unsigned)totalSize);
+  Serial.print("\n<IMG_END>\n");
+  Serial.printf("Image %u from %s forwarded (size=%u bytes)\n", ib.img_id, macToHex(senderMac).c_str(), (unsigned)totalSize);
 
   // cleanup
   ib.reset();
@@ -164,7 +164,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
         tryFinalizeImage(*ib, mac);
       } else {
         // DONE for unknown image - ignore
-        // Serial.printf("Received DONE for unknown img %u from %s\n", img_id, macToHex(mac).c_str());
+        Serial.printf("Received DONE for unknown img %u from %s\n", img_id, macToHex(mac).c_str());
       }
     }
     return;
@@ -194,15 +194,15 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
         unsigned long age = now - ib->lastUpdate;
         if (age < IMAGE_TIMEOUT_MS) {
           // previously active image not finished but different id -> free old buffer
-          // Serial.printf("New img_id %u arrived from %s while previous %u incomplete. Resetting old buffer.\n",
-                //        img_id, macToHex(mac).c_str(), ib->img_id);
+          Serial.printf("New img_id %u arrived from %s while previous %u incomplete. Resetting old buffer.\n",
+                        img_id, macToHex(mac).c_str(), ib->img_id);
         }
         ib->reset();
       }
       // allocate for the incoming total (if total==0, be conservative)
       if (total == 0) total = 200; // fallback large number (shouldn't happen)
       if (!allocChunks(*ib, total)) {
-        // Serial.println("Failed to alloc image chunks (OOM). Dropping image.");
+        Serial.println("Failed to alloc image chunks (OOM). Dropping image.");
         return;
       }
       ib->img_id = img_id;
@@ -212,7 +212,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
 
     // bounds check
     if (seq >= ib->total_chunks) {
-      // Serial.printf("Received seq %u >= total %u from %s (img %u). Ignoring.\n", seq, ib->total_chunks, macToHex(mac).c_str(), img_id);
+      Serial.printf("Received seq %u >= total %u from %s (img %u). Ignoring.\n", seq, ib->total_chunks, macToHex(mac).c_str(), img_id);
       return;
     }
 
@@ -226,7 +226,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
     // store chunk
     ib->chunks[seq].data = (uint8_t*)malloc(payloadLen);
     if (!ib->chunks[seq].data) {
-      // Serial.println("OOM allocating chunk; dropping image buffer.");
+      Serial.println("OOM allocating chunk; dropping image buffer.");
       ib->reset();
       return;
     }
@@ -264,13 +264,13 @@ void setup() {
   WiFi.mode(WIFI_STA);
 
   if (esp_now_init() != ESP_OK) {
-    // Serial.println("ESP-NOW init failed!");
+    Serial.println("ESP-NOW init failed!");
     while (1);
   }
 
   esp_now_register_recv_cb(OnDataRecv);
 
-  // Serial.println("Receiver initialized and ready for multiple senders (images + sensors).");
+  Serial.println("Receiver initialized and ready for multiple senders (images + sensors).");
 }
 
 // ---------- Loop ----------
@@ -278,41 +278,41 @@ void loop() {
   static unsigned long lastPlotTime = 0;
   static unsigned long lastTerminalTime = 0;
   unsigned long now = millis();
-  bool plotIR = false;
+  bool plotIR = true;
 
   // drop stale image buffers
   if (now % 1000 < 50) { // roughly every second
     if (buf1.img_id != 0 && (now - buf1.lastUpdate) > IMAGE_TIMEOUT_MS) {
-      // Serial.printf("Timeout: dropping incomplete image %u from %s\n", buf1.img_id, macToHex(sender1MAC).c_str());
+      Serial.printf("Timeout: dropping incomplete image %u from %s\n", buf1.img_id, macToHex(sender1MAC).c_str());
       buf1.reset();
     }
     if (buf2.img_id != 0 && (now - buf2.lastUpdate) > IMAGE_TIMEOUT_MS) {
-      // Serial.printf("Timeout: dropping incomplete image %u from %s\n", buf2.img_id, macToHex(sender2MAC).c_str());
+      Serial.printf("Timeout: dropping incomplete image %u from %s\n", buf2.img_id, macToHex(sender2MAC).c_str());
       buf2.reset();
     }
   }
 
   // ---------- Serial Plotter for 8 IR sensors ----------
-  if (now - lastPlotTime >= 100) { // plot every 100ms
-    if (plotIR) {
-      Serial.print("S1:"); Serial.print(packet1.sensor1);
-      Serial.print(" S2:"); Serial.print(packet1.sensor2); 
-      Serial.print(" S3:"); Serial.print(packet1.sensor3);
-      Serial.print(" S4:"); Serial.print(packet1.sensor4);
-      Serial.print(" S5:"); Serial.print(packet2.sensor5);
-      Serial.print(" S6:"); Serial.print(packet2.sensor6);
-      Serial.print(" S7:"); Serial.print(packet2.sensor7);
-      Serial.print(" S8:"); Serial.println(packet2.sensor8);
-    } else {
-      Serial.print("AccX:"); Serial.print(packet1.accelX);
-      Serial.print(" AccY:"); Serial.print(packet1.accelY);
-      Serial.print(" AccZ:"); Serial.print(packet1.accelZ);
-      Serial.print(" GryX:"); Serial.print(packet1.gyroX);
-      Serial.print(" GryY:"); Serial.print(packet1.gyroY);
-      Serial.print(" GryZ:"); Serial.println(packet1.gyroZ);
-    }
-    lastPlotTime = now;
-  }
+//   if (now - lastPlotTime >= 100) { // plot every 100ms
+//     if (plotIR) {
+//       Serial.print("S1:"); Serial.print(packet1.sensor1);
+//       Serial.print(" S2:"); Serial.print(packet1.sensor2);
+//       Serial.print(" S3:"); Serial.print(packet1.sensor3);
+//       Serial.print(" S4:"); Serial.print(packet1.sensor4);
+//       Serial.print(" S5:"); Serial.print(packet2.sensor5);
+//       Serial.print(" S6:"); Serial.print(packet2.sensor6);
+//       Serial.print(" S7:"); Serial.print(packet2.sensor7);
+//       Serial.print(" S8:"); Serial.println(packet2.sensor8);
+//     } else {
+//       Serial.print("AccX:"); Serial.print(packet1.accelX);
+//       Serial.print(" AccY:"); Serial.print(packet1.accelY);
+//       Serial.print(" AccZ:"); Serial.print(packet1.accelZ);
+//       Serial.print(" GryX:"); Serial.print(packet1.gyroX);
+//       Serial.print(" GryY:"); Serial.print(packet1.gyroY);
+//       Serial.print(" GryZ:"); Serial.println(packet1.gyroZ);
+//     }
+//     lastPlotTime = now;
+//   }
 
   // ---------- Serial Monitor for simple debug ----------
   if (now - lastTerminalTime >= 1000) {
