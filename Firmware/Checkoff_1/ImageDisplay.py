@@ -2,15 +2,13 @@
 import serial
 import time
 import re
-import sys
 import cv2
 import numpy as np
 
-COM_PORT = "COM5"   # change if needed
+COM_PORT = "COM5"
 BAUD = 115200
-TIMEOUT = 1        # seconds read timeout
+TIMEOUT = 1
 
-# Regex to parse header: <IMG_START:MACHEX:IMGID:SIZE>
 HEADER_RE = re.compile(rb'^<IMG_START:([0-9A-Fa-f]{12}):([0-9]+):([0-9]+)>\s*$')
 
 def read_exact(ser, n):
@@ -18,7 +16,6 @@ def read_exact(ser, n):
     while len(buf) < n:
         chunk = ser.read(n - len(buf))
         if not chunk:
-            # timeout or no data
             return None
         buf.extend(chunk)
     return bytes(buf)
@@ -26,20 +23,15 @@ def read_exact(ser, n):
 def main():
     print(f"Opening {COM_PORT} at {BAUD} baud...")
     ser = serial.Serial(COM_PORT, BAUD, timeout=TIMEOUT)
-    # use a small delay for the ESP to boot or for connection readiness
     time.sleep(0.5)
     print("Listening for images. Press Ctrl+C to quit.")
-    partial = b""
 
     try:
         while True:
-            # read a line (text) from serial to catch header lines or other messages
             line = ser.readline()
             if not line:
-                # no line read - continue
                 continue
 
-            # Trim newline(s)
             line_stripped = line.strip()
             m = HEADER_RE.match(line_stripped)
             if m:
