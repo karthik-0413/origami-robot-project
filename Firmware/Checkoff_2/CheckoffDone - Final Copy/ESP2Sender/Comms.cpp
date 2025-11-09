@@ -3,7 +3,7 @@
 #include <WiFiUdp.h>
 #include <esp_now.h>
 
-uint8_t receiverMAC[] = {0x38,0x18,0x2B,0xB2,0x23,0x64};    // 38:18:2b:b2:23:64
+uint8_t receiverMAC[] = {0x14,0x33,0x5C,0x0A,0x48,0x2C};
 WiFiUDP udpClient;
 
 void OnDataSent(const wifi_tx_info_t *info, esp_now_send_status_t status) {}

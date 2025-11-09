@@ -56,8 +56,15 @@ void handleUDPPackets() {
     ib->lastUpdate=millis();
 
     if(ib->received_chunks==ib->total_chunks){
+        // Check if BOTH cameras are complete BEFORE finalizing
+        bool bothComplete = (buf1.received_chunks == buf1.total_chunks && 
+                             buf2.received_chunks == buf2.total_chunks);
+        
+        // Finalize this image (forwards to laptop and resets buffer)
         finalizeImage(*ib);
-        if(buf1.received_chunks==buf1.total_chunks && buf2.received_chunks==buf2.total_chunks){
+        
+        // Send trigger only if BOTH were complete
+        if(bothComplete){
             sendTriggerToSenders();
         }
     }
@@ -124,7 +131,8 @@ void forwardImageToLaptop(ImageBuffer &ib) {
         udpClient.write(packet, HEADER_SIZE + chunkSize);
         udpClient.endPacket();
         
-        delay(2); // Small delay to prevent overwhelming the network
+        // No delay - send as fast as possible
+        yield(); // Just yield to prevent watchdog
     }
     
     free(imageData);

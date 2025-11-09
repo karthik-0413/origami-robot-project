@@ -5,11 +5,7 @@
 #include <esp_now.h>
 
 WiFiUDP udpServer;
-WiFiUDP udpClient;
-
-// Laptop IP and port for forwarding images
-IPAddress laptopIP(192, 168, 8, 100);
-const uint16_t LAPTOP_PORT = 9999;
+WiFiUDP udpClient; // For forwarding to laptop
 
 namespace Comms {
 
@@ -25,20 +21,9 @@ void initWiFi() {
     WiFi.config(local_IP,gateway,subnet,dns);
     WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
     while(WiFi.status()!=WL_CONNECTED) delay(500);
-    Serial.println("WiFi connected!");
-    Serial.print("Receiver IP: ");
-    Serial.println(WiFi.localIP());
 }
 
-void initUDPServer() { 
-    udpServer.begin(IMAGE_PORT);
-    Serial.printf("UDP Server listening on port %d for images from senders\n", IMAGE_PORT);
-}
-
-void initUDPClient() {
-    Serial.printf("UDP Client ready to forward images to laptop %s:%d\n", 
-                  laptopIP.toString().c_str(), LAPTOP_PORT);
-}
+void initUDPServer(){ udpServer.begin(IMAGE_PORT); }
 
 void handleUDPPackets() {
     int packetSize = udpServer.parsePacket();
@@ -72,59 +57,10 @@ void handleUDPPackets() {
 
     if(ib->received_chunks==ib->total_chunks){
         finalizeImage(*ib);
-        
-        // Forward complete image to laptop
-        forwardImageToLaptop(*ib);
-        
         if(buf1.received_chunks==buf1.total_chunks && buf2.received_chunks==buf2.total_chunks){
             sendTriggerToSenders();
         }
     }
-}
-
-void forwardImageToLaptop(ImageBuffer &ib) {
-    // Calculate total image size
-    size_t totalSize = 0;
-    for (uint16_t i = 0; i < ib.total_chunks; i++) {
-        totalSize += ib.chunks[i].len;
-    }
-    
-    Serial.printf("Forwarding Camera %u image to laptop (%u bytes in %u chunks)\n", 
-                  ib.camera_id, totalSize, ib.total_chunks);
-    
-    // Send each chunk with header: [CAMERA_ID][SEQ_HIGH][SEQ_LOW][TOTAL_HIGH][TOTAL_LOW][DATA]
-    for (uint16_t seq = 0; seq < ib.total_chunks; seq++) {
-        if (!ib.chunks[seq].data) continue;
-        
-        uint8_t header[5];
-        header[0] = ib.camera_id;
-        header[1] = (seq >> 8) & 0xFF;
-        header[2] = seq & 0xFF;
-        header[3] = (ib.total_chunks >> 8) & 0xFF;
-        header[4] = ib.total_chunks & 0xFF;
-        
-        udpClient.beginPacket(laptopIP, LAPTOP_PORT);
-        udpClient.write(header, 5);
-        udpClient.write(ib.chunks[seq].data, ib.chunks[seq].len);
-        udpClient.endPacket();
-        
-        // Small delay to prevent overwhelming the laptop
-        delay(2);
-    }
-    
-    // Send completion marker: [CAMERA_ID][0xFF][0xFF][TOTAL_HIGH][TOTAL_LOW]
-    uint8_t donePacket[5];
-    donePacket[0] = ib.camera_id;
-    donePacket[1] = 0xFF;
-    donePacket[2] = 0xFF;
-    donePacket[3] = (totalSize >> 8) & 0xFF;
-    donePacket[4] = totalSize & 0xFF;
-    
-    udpClient.beginPacket(laptopIP, LAPTOP_PORT);
-    udpClient.write(donePacket, 5);
-    udpClient.endPacket();
-    
-    Serial.printf("Camera %u forwarding complete!\n", ib.camera_id);
 }
 
 void initESPNow() {
@@ -142,6 +78,57 @@ void sendTriggerToSenders() {
     uint8_t triggerMsg=0x01;
     esp_now_send(sender1MAC,&triggerMsg,1);
     esp_now_send(sender2MAC,&triggerMsg,1);
+}
+
+// Forward complete image to laptop
+void forwardImageToLaptop(ImageBuffer &ib) {
+    // Calculate total image size
+    size_t totalSize = 0;
+    for (uint16_t i = 0; i < ib.total_chunks; i++) {
+        totalSize += ib.chunks[i].len;
+    }
+    
+    // Allocate buffer for complete image
+    uint8_t *imageData = (uint8_t*)malloc(totalSize);
+    if (!imageData) {
+        Serial.println("Failed to allocate memory for image forwarding");
+        return;
+    }
+    
+    // Concatenate all chunks
+    size_t offset = 0;
+    for (uint16_t i = 0; i < ib.total_chunks; i++) {
+        memcpy(imageData + offset, ib.chunks[i].data, ib.chunks[i].len);
+        offset += ib.chunks[i].len;
+    }
+    
+    // Send image to laptop via UDP
+    // Format: [camera_id][img_size_high][img_size_low][image_data]
+    const size_t HEADER_SIZE = 3;
+    const size_t MAX_UDP_SIZE = 1400;
+    const size_t MAX_PAYLOAD = MAX_UDP_SIZE - HEADER_SIZE;
+    
+    uint16_t numPackets = (totalSize + MAX_PAYLOAD - 1) / MAX_PAYLOAD;
+    
+    for (uint16_t pkt = 0; pkt < numPackets; pkt++) {
+        size_t chunkStart = pkt * MAX_PAYLOAD;
+        size_t chunkSize = min((size_t)MAX_PAYLOAD, totalSize - chunkStart);
+        
+        uint8_t packet[MAX_UDP_SIZE];
+        packet[0] = ib.camera_id;
+        packet[1] = (totalSize >> 8) & 0xFF;
+        packet[2] = totalSize & 0xFF;
+        memcpy(packet + HEADER_SIZE, imageData + chunkStart, chunkSize);
+        
+        udpClient.beginPacket(LAPTOP_IP, LAPTOP_PORT);
+        udpClient.write(packet, HEADER_SIZE + chunkSize);
+        udpClient.endPacket();
+        
+        delay(2); // Small delay to prevent overwhelming the network
+    }
+    
+    free(imageData);
+    Serial.printf("Forwarded Camera %u image (%u bytes) to laptop\n", ib.camera_id, totalSize);
 }
 
 } // namespace Comms

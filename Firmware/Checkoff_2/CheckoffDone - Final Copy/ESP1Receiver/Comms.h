@@ -5,26 +5,22 @@
 #include <esp_now.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
-
-// Forward declaration to avoid circular dependency
-struct ImageBuffer;
+#include "ImageBuffer.h"
 
 #define WIFI_SSID "GL-MT3000-8d3"
 #define WIFI_PASSWORD "QYAXW83ASS"
 #define IMAGE_PORT 8888
 
-// UDP for receiving images from senders
-extern WiFiUDP udpServer;
+// UDP forwarding to laptop
+#define LAPTOP_IP "192.168.8.100"
+#define LAPTOP_PORT 9999
 
-// UDP for forwarding images to laptop
+extern WiFiUDP udpServer;
 extern WiFiUDP udpClient;
-extern IPAddress laptopIP;
-extern const uint16_t LAPTOP_PORT;
 
 namespace Comms {
     void initWiFi();
     void initUDPServer();
-    void initUDPClient();
     void handleUDPPackets();
     void initESPNow();
     void registerCallback();
