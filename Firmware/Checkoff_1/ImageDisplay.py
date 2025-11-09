@@ -1,4 +1,3 @@
-# receive_display.py
 import serial
 import time
 import re
