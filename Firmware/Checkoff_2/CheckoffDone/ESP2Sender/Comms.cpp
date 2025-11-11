@@ -8,8 +8,12 @@ WiFiUDP udpClient;
 
 void OnDataSent(const wifi_tx_info_t *info, esp_now_send_status_t status) {}
 
+void sendSensorData() {
+  esp_now_send(receiverMAC, (uint8_t*)&sensorData, sizeof(sensorData));
+}
+
 void initWiFi() {
-    WiFi.mode(WIFI_AP_STA);
+    // WiFi.mode(WIFI_AP_STA);
     IPAddress local_IP(192,168,8,100+CAMERA_ID);
     IPAddress gateway(192,168,8,1);
     IPAddress subnet(255,255,255,0);
@@ -23,6 +27,7 @@ void initWiFi() {
 }
 
 void initESPNow() {
+    WiFi.mode(WIFI_STA);
     if (esp_now_init() != ESP_OK) { Serial.println("ESP-NOW init failed"); while(1); }
     esp_now_register_send_cb(OnDataSent);
 
