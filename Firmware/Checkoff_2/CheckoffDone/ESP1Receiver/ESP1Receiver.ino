@@ -28,29 +28,29 @@ void loop() {
     // Handle incoming UDP packets for images
     Comms::handleUDPPackets();
 
-    static bool plotIR = false;               // Toggle between IR sensors and IMU data
+    static bool plotIR = true;               // Toggle between IR sensors and IMU data
     
-    // // ---------- Serial Plotter output for IR sensors or IMU ----------
-    // if (now - lastPlotTime >= 100) {          // Update plot every 100ms
-    //     if (plotIR) {                         // Plot IR/digital sensors
-    //         Serial.print("S1:"); Serial.print(packet1.sensor1);     // Sensor 1
-    //         Serial.print(" S2:"); Serial.print(packet1.sensor2);    // Sensor 2
-    //         Serial.print(" S3:"); Serial.print(packet1.sensor3);    // Sensor 3
-    //         Serial.print(" S4:"); Serial.print(packet1.sensor4);    // Sensor 4
-    //         Serial.print(" S5:"); Serial.print(packet2.sensor5);    // Sensor 5
-    //         Serial.print(" S6:"); Serial.print(packet2.sensor6);    // Sensor 6
-    //         Serial.print(" S7:"); Serial.print(packet2.sensor7);    // Sensor 7
-    //         Serial.print(" S8:"); Serial.println(packet2.sensor8);  // Sensor 8
-    //     } else {                              // Plot IMU data
-    //         Serial.print("AccX:"); Serial.print(packet1.accelX);
-    //         Serial.print(" AccY:"); Serial.print(packet1.accelY);
-    //         Serial.print(" AccZ:"); Serial.print(packet1.accelZ);
-    //         Serial.print(" GryX:"); Serial.print(packet1.gyroX);
-    //         Serial.print(" GryY:"); Serial.print(packet1.gyroY);
-    //         Serial.print(" GryZ:"); Serial.println(packet1.gyroZ);
-    //     }
-    //     lastPlotTime = now;                   // Update last plot time
-    // }
+    // ---------- Serial Plotter output for IR sensors or IMU ----------
+    if (now - lastPlotTime >= 100) {          // Update plot every 100ms
+        if (plotIR) {                         // Plot IR/digital sensors
+            Serial.print("S1:"); Serial.print(packet1.sensor1);     // Sensor 1
+            Serial.print(" S2:"); Serial.print(packet1.sensor2);    // Sensor 2
+            Serial.print(" S3:"); Serial.print(packet1.sensor3);    // Sensor 3
+            Serial.print(" S4:"); Serial.print(packet1.sensor4);    // Sensor 4
+            Serial.print(" S5:"); Serial.print(packet2.sensor5);    // Sensor 5
+            Serial.print(" S6:"); Serial.print(packet2.sensor6);    // Sensor 6
+            Serial.print(" S7:"); Serial.print(packet2.sensor7);    // Sensor 7
+            Serial.print(" S8:"); Serial.println(packet2.sensor8);  // Sensor 8
+        } else {                              // Plot IMU data
+            Serial.print("AccX:"); Serial.print(packet1.accelX);
+            Serial.print(" AccY:"); Serial.print(packet1.accelY);
+            Serial.print(" AccZ:"); Serial.print(packet1.accelZ);
+            Serial.print(" GryX:"); Serial.print(packet1.gyroX);
+            Serial.print(" GryY:"); Serial.print(packet1.gyroY);
+            Serial.print(" GryZ:"); Serial.println(packet1.gyroZ);
+        }
+        lastPlotTime = now;                   // Update last plot time
+    }
 
     // Drop stale images
     if (now % 1000 < 50) {
