@@ -2,6 +2,8 @@
 #include <Wire.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
 #include <SPI.h>
 #include <WiFi.h>
 #include <esp_now.h>
@@ -69,71 +71,34 @@ void onTriggerReceived(const esp_now_recv_info_t *, const uint8_t *, int);
 // ============================================================================
 // SETUP
 // ============================================================================
-void resetI2CBus() {
-  pinMode(21, OUTPUT);  // SDA
-  pinMode(22, OUTPUT);  // SCL
-  
-  // Generate 9 clock pulses to reset any stuck slave
-  for (int i = 0; i < 9; i++) {
-    digitalWrite(22, HIGH);
-    delayMicroseconds(5);
-    digitalWrite(22, LOW);
-    delayMicroseconds(5);
-  }
-  
-  // Generate STOP condition
-  digitalWrite(21, LOW);
-  delayMicroseconds(5);
-  digitalWrite(22, HIGH);
-  delayMicroseconds(5);
-  digitalWrite(21, HIGH);
-  delayMicroseconds(5);
-  
-  // Return pins to I2C control
-  pinMode(21, INPUT);
-  pinMode(22, INPUT);
-  delay(10);
-}
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  // Disable WiFi during I2C initialization
-  WiFi.mode(WIFI_OFF);
-
-
-  // Motor setup
   setupMotor(hinge1);
-  // setupMotor(L12);
-  // setupMotor(R56);
-  // setupMotor(L34);
-  // setupMotor(R78);
-
   pinMode(EN_PIN, INPUT_PULLDOWN);
   pinMode(BUT_PIN, INPUT_PULLDOWN);
 
-  // PID and Encoder
   myPidSetup(&hingePID);
   PIDController_Init(&hingePID);
   initEncoder();
 
-  // Initialize I2C with slower speed BEFORE any I2C devices
-  resetI2CBus();
-  Wire.begin();
-  Wire.setClock(100000);  // 100kHz instead of default 400kHz
-  delay(100);
-
-  // Initialize I2C devices in order
-  // initMPU();   // Initialize distance sensors first
-  delay(200);
-  // initVL53L0X();       // Then initialize MPU6050
+  // Initialize camera I2C (GPIO 21/22) FIRST
+  Wire.begin(21, 22);
+  Wire.setClock(100000);
   delay(200);
 
-  // Non-I2C devices
-  initCamera();
+  initCamera();  // Camera uses default Wire on GPIO 21/22
+  delay(500);
+
+  // Initialize sensors on separate I2C (GPIO 25/26)
+  initVL53L0X();  // Uses I2C_SENSORS internally
+  delay(200);
+  initMPU();      // Uses I2C_SENSORS internally
+  delay(200);
+  
   initWiFi();
   initESPNow();
-  
   esp_now_register_recv_cb(onTriggerReceived);
   
   Serial.println("System initialized");
@@ -167,14 +132,14 @@ void loop() {
   
   // ========== MEDIUM PRIORITY: SENSOR READING (runs every 50ms) ==========
   if (now - lastSensorRead >= 50) {
-    // readVL53L0X();
-    // readMPU();
+    readVL53L0X();
+    readMPU();
     lastSensorRead = now;
   }
   
   // ========== LOW PRIORITY: SENSOR DATA TRANSMISSION (runs every 100ms) ==========
   if (now - lastSensorSend >= 100) {
-    // sendSensorData();
+    sendSensorData();
     lastSensorSend = now;
   }
   
@@ -196,6 +161,7 @@ void loop() {
 // ============================================================================
 void onTriggerReceived(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
   if (len == 1 && data[0] == 1) {
+    // Serial.print("Received");
     triggerReceived = true;
   }
 }

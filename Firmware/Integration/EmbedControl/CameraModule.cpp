@@ -5,6 +5,8 @@
 ArduCAM myCAM(OV2640, CS);
 
 void initCamera() {
+    Serial.println("Initializing camera on default I2C (GPIO 21/22)...");
+    
     SPI.begin(18, 19, 23, CS);
     pinMode(CS, OUTPUT);
     digitalWrite(CS, HIGH);
@@ -18,25 +20,38 @@ void initCamera() {
 
     // Grayscale for smaller file size
     myCAM.OV2640_set_Special_effects(BW);
-
+    
     myCAM.OV2640_set_JPEG_size(OV2640_320x240);
     myCAM.clear_fifo_flag();
+    
+    Serial.println("Camera initialized successfully");
 }
 
 void captureAndSend() {
     myCAM.flush_fifo();
     myCAM.clear_fifo_flag();
     myCAM.start_capture();
-    while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
+    
+    unsigned long timeout = millis();
+    while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
+        if (millis() - timeout > 5000) {
+            Serial.println("Camera capture timeout!");
+            myCAM.clear_fifo_flag();
+            return;
+        }
+    }
 
     uint32_t length = myCAM.read_fifo_length();
-    if (length == 0) {
+    if (length == 0 || length > 100000) {
         myCAM.clear_fifo_flag();
         return;
     }
 
     uint8_t* buffer = (uint8_t*)malloc(length);
-    if (!buffer) { myCAM.clear_fifo_flag(); return; }
+    if (!buffer) { 
+        myCAM.clear_fifo_flag(); 
+        return; 
+    }
 
     myCAM.CS_LOW();
     myCAM.set_fifo_burst();
@@ -45,6 +60,8 @@ void captureAndSend() {
     myCAM.clear_fifo_flag();
 
     bool ok = sendImageUDP(buffer, length);
-    if (!ok) Serial.println("Image send failed");
+    if (ok) {
+        Serial.println("Image sent successfully");
+    }
     free(buffer);
 }

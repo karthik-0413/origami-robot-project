@@ -11,10 +11,10 @@
 #define XSHUT3 2                // Shutdown pin for sensor 3
 #define XSHUT4 4                // Shutdown pin for sensor 4
 
-#define LOX1_ADDRESS 0x30       // I2C address for sensor 1
-#define LOX2_ADDRESS 0x31       // I2C address for sensor 2
-#define LOX3_ADDRESS 0x32       // I2C address for sensor 3
-#define LOX4_ADDRESS 0x33       // I2C address for sensor 4
+#define LOX1_ADDRESS 0x44       // I2C address for sensor 1
+#define LOX2_ADDRESS 0x45       // I2C address for sensor 2
+#define LOX3_ADDRESS 0x46       // I2C address for sensor 3
+#define LOX4_ADDRESS 0x47       // I2C address for sensor 4
 
 // ---------- Sensor Data Structure ----------
 typedef struct {
