@@ -4,7 +4,7 @@
 // Create separate I2C bus for sensors on GPIO 25/26
 TwoWire I2C_SENSORS = TwoWire(1);
 
-Adafruit_VL53L0X lox1, lox2, lox3, lox4;
+Adafruit_VL53L0X lox1, lox2, lox3; //, lox4;
 Adafruit_MPU6050 mpu;
 SensorPacket sensorData;
 
@@ -19,12 +19,12 @@ void initVL53L0X() {
   pinMode(XSHUT1, OUTPUT);
   pinMode(XSHUT2, OUTPUT);
   pinMode(XSHUT3, OUTPUT);
-  pinMode(XSHUT4, OUTPUT);
+  // pinMode(XSHUT4, OUTPUT);
 
   digitalWrite(XSHUT1, LOW);
   digitalWrite(XSHUT2, LOW);
   digitalWrite(XSHUT3, LOW);
-  digitalWrite(XSHUT4, LOW);
+  // digitalWrite(XSHUT4, LOW);
   delay(50);
 
   digitalWrite(XSHUT1, HIGH); 
@@ -45,11 +45,11 @@ void initVL53L0X() {
     Serial.println("VL53L0X #3 failed!");
   }
 
-  digitalWrite(XSHUT4, HIGH); 
-  delay(50);
-  if (!lox4.begin(LOX4_ADDRESS, false, &I2C_SENSORS)) {
-    Serial.println("VL53L0X #4 failed!");
-  }
+  // digitalWrite(XSHUT4, HIGH); 
+  // delay(50);
+  // if (!lox4.begin(LOX4_ADDRESS, false, &I2C_SENSORS)) {
+  //   Serial.println("VL53L0X #4 failed!");
+  // }
   
   Serial.println("VL53L0X initialization complete");
 }
@@ -100,7 +100,7 @@ void readVL53L0X() {
   lox1.rangingTest(&measure[0], false);
   lox2.rangingTest(&measure[1], false);
   lox3.rangingTest(&measure[2], false);
-  lox4.rangingTest(&measure[3], false);
+  // lox4.rangingTest(&measure[3], false);
 
   bool results[4] = {false, false, false, false};
 
@@ -113,5 +113,9 @@ void readVL53L0X() {
   sensorData.sensor1 = results[0];
   sensorData.sensor2 = results[1];
   sensorData.sensor3 = results[2];
-  sensorData.sensor4 = results[3];
+  // sensorData.sensor4 = results[3];
+
+  Serial.print("IR1: "); Serial.println(sensorData.sensor1);
+  Serial.print("IR2: "); Serial.println(sensorData.sensor2);
+  Serial.print("IR3: "); Serial.println(sensorData.sensor3);
 }
