@@ -28,7 +28,7 @@ void initCamera() {
     myCAM.wrSensorReg8_8(0x7c, 0x05);  
     myCAM.wrSensorReg8_8(0x7d, 0x80);  // Gray tone
     myCAM.wrSensorReg8_8(0x7d, 0x80);
-
+    
     myCAM.OV2640_set_JPEG_size(OV2640_320x240);
     myCAM.clear_fifo_flag();
     
