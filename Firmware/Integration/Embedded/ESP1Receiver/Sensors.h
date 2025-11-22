@@ -5,13 +5,13 @@
 
 // ---------- Sensor Data Structure ----------
 typedef struct {
-  bool sensor1, sensor2, sensor3, sensor4;   // Proximity flags for 4 VL53L0X sensors
+  bool sensor1, sensor2, sensor3; //, sensor4;   // Proximity flags for 4 VL53L0X sensors
   float accelX, accelY, accelZ;              // Accelerometer readings
   float gyroX, gyroY, gyroZ;                 // Gyroscope readings
 } SensorPacket1;
 
 typedef struct {
-  bool sensor5, sensor6, sensor7, sensor8;   // Proximity flags for 4 VL53L0X sensors
+  bool sensor4, sensor5, sensor6; //, sensor8;   // Proximity flags for 4 VL53L0X sensors
 } SensorPacket2;
 
 // Global sensor data objects

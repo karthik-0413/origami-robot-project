@@ -83,10 +83,28 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
 
     const uint8_t *mac = info->src_addr;
 
-    if (compareMAC(mac, sender1MAC) && len == sizeof(SensorPacket1)) 
+    if (compareMAC(mac, sender1MAC) && len == sizeof(SensorPacket1)) {
         memcpy(&packet1, data, sizeof(SensorPacket1));
-    else if (compareMAC(mac, sender2MAC) && len == sizeof(SensorPacket2)) 
+        // ⭐ SEND TO LAPTOP VIA SERIAL
+        Serial.print("\nSENSOR1,");
+        Serial.print(packet1.sensor1); Serial.print(",");
+        Serial.print(packet1.sensor2); Serial.print(",");
+        Serial.print(packet1.sensor3); Serial.print(",");
+        Serial.print(packet1.accelX, 3); Serial.print(",");
+        Serial.print(packet1.accelY, 3); Serial.print(",");
+        Serial.print(packet1.accelZ, 3); Serial.print(",");
+        Serial.print(packet1.gyroX, 3); Serial.print(",");
+        Serial.print(packet1.gyroY, 3); Serial.print(",");
+        Serial.println(packet1.gyroZ, 3);
+    }
+    else if (compareMAC(mac, sender2MAC) && len == sizeof(SensorPacket2)) {
         memcpy(&packet2, data, sizeof(SensorPacket2));
+        // ⭐ SEND TO LAPTOP VIA SERIAL
+        Serial.print("SENSOR2,");
+        Serial.print(packet2.sensor4); Serial.print(",");
+        Serial.print(packet2.sensor5); Serial.print(",");
+        Serial.print(packet2.sensor6); Serial.print(",");
+    }
 
     // Compare MAC addresses (sensor packets or other triggers)
     bool fromSender1 = true;

@@ -169,26 +169,26 @@ for idx, (lf, rf) in enumerate(zip(left_files, right_files), 1):
         cv2.imshow("Detected Corners (Left | Right) [320x240 upscaled]", combined)
         cv2.waitKey(100)
 
-    else:
-        failure_count += 1
-        print(f"⚠️  [{idx}/{len(left_files)}] {os.path.basename(lf)}: L:{status_left} R:{status_right} - FAILED")
+    # else:
+    #     failure_count += 1
+    #     print(f"⚠️  [{idx}/{len(left_files)}] {os.path.basename(lf)}: L:{status_left} R:{status_right} - FAILED")
         
-        # Show failed images (upscaled)
-        imgL_color = cv2.cvtColor(imgL, cv2.COLOR_GRAY2BGR)
-        imgR_color = cv2.cvtColor(imgR, cv2.COLOR_GRAY2BGR)
+    #     # Show failed images (upscaled)
+    #     imgL_color = cv2.cvtColor(imgL, cv2.COLOR_GRAY2BGR)
+    #     imgR_color = cv2.cvtColor(imgR, cv2.COLOR_GRAY2BGR)
         
-        # Try to show what detection sees
-        imgL_big = cv2.resize(imgL_color, (640, 480), interpolation=cv2.INTER_CUBIC)
-        imgR_big = cv2.resize(imgR_color, (640, 480), interpolation=cv2.INTER_CUBIC)
+    #     # Try to show what detection sees
+    #     imgL_big = cv2.resize(imgL_color, (640, 480), interpolation=cv2.INTER_CUBIC)
+    #     imgR_big = cv2.resize(imgR_color, (640, 480), interpolation=cv2.INTER_CUBIC)
         
-        cv2.putText(imgL_big, "DETECTION FAILED", (10, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        cv2.putText(imgR_big, "DETECTION FAILED", (10, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    #     cv2.putText(imgL_big, "DETECTION FAILED", (10, 30), 
+    #                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    #     cv2.putText(imgR_big, "DETECTION FAILED", (10, 30), 
+    #                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         
-        combined = np.hstack([imgL_big, imgR_big])
-        cv2.imshow("Failed Detection (Left | Right) - Press any key", combined)
-        cv2.waitKey(500)
+    #     combined = np.hstack([imgL_big, imgR_big])
+    #     cv2.imshow("Failed Detection (Left | Right) - Press any key", combined)
+    #     cv2.waitKey(500)
 
 cv2.destroyAllWindows()
 

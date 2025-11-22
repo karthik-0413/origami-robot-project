@@ -2,7 +2,6 @@
 #define SENSORS_H
 
 #include <Adafruit_VL53L0X.h>
-#include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 
 // ---------- Pins & I2C Addresses ----------
@@ -18,17 +17,13 @@
 
 // ---------- Sensor Data Structure ----------
 typedef struct {
-  bool sensor1, sensor2, sensor3; //, sensor4;   // Proximity flags for 4 VL53L0X sensors
-  float accelX, accelY, accelZ;              // Accelerometer readings
-  float gyroX, gyroY, gyroZ;                 // Gyroscope readings
+  bool sensor4, sensor5, sensor6; //, sensor8;   // Proximity flags for 4 VL53L0X sensors
 } SensorPacket;
 
 extern SensorPacket sensorData;              // Global sensor data object
 
 // ---------- Sensor Functions ----------
 void initVL53L0X();        // Initialize 4 VL53L0X sensors with unique addresses
-void initMPU();            // Initialize MPU6050 accelerometer/gyroscope
 void readVL53L0X();        // Read distance data from 4 VL53L0X sensors
-void readMPU();            // Read accelerometer and gyroscope data from MPU6050
 
 #endif  // SENSORS_H

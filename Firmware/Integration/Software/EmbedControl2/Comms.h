@@ -12,7 +12,7 @@
 #define WIFI_PASSWORD "QYAXW83ASS"
 // #define WIFI_PASSWORD "designlab1"
 #define IMAGE_PORT 8888
-#define CAMERA_ID 1
+#define CAMERA_ID 2
 
 extern uint8_t receiverMAC[];
 extern WiFiUDP udpClient;

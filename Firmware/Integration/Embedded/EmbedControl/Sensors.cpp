@@ -92,6 +92,13 @@ void readMPU() {
   sensorData.gyroX = g.gyro.x;
   sensorData.gyroY = g.gyro.y;
   sensorData.gyroZ = g.gyro.z;
+
+  // Serial.print("AccX: "); Serial.println(sensorData.accelX);
+  // Serial.print("AccY: "); Serial.println(sensorData.accelY);
+  // Serial.print("AccZ: "); Serial.println(sensorData.accelZ);
+  // Serial.print("GryX: "); Serial.println(sensorData.gyroX);
+  // Serial.print("GryY: "); Serial.println(sensorData.gyroY);
+  // Serial.print("GryZ: "); Serial.println(sensorData.gyroZ);
 }
 
 void readVL53L0X() {
@@ -113,9 +120,10 @@ void readVL53L0X() {
   sensorData.sensor1 = results[0];
   sensorData.sensor2 = results[1];
   sensorData.sensor3 = results[2];
+  // sensorData.timestamp = localtime();
   // sensorData.sensor4 = results[3];
 
-  Serial.print("IR1: "); Serial.println(sensorData.sensor1);
-  Serial.print("IR2: "); Serial.println(sensorData.sensor2);
-  Serial.print("IR3: "); Serial.println(sensorData.sensor3);
+  // Serial.print("IR1: "); Serial.println(sensorData.sensor1);
+  // Serial.print("IR2: "); Serial.println(sensorData.sensor2);
+  // Serial.print("IR3: "); Serial.println(sensorData.sensor3);
 }

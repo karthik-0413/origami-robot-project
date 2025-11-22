@@ -25,9 +25,9 @@ struct Motor {
 // ============================================================================
 // PIN DEFINITIONS
 // ============================================================================
-const int IN_1A = 32, IN_2A = 27;
-// const int IN_1B = 26, IN_2B = 25;
-// const int IN_3B = 33, IN_4B = 4;
+const int IN_1A = 33, IN_2A = 14;
+const int IN_1B = 32, IN_2B = 27;
+const int IN_3B = 2, IN_4B = 4;
 // const int IN_1C = 35, IN_2C = 34;
 // const int IN_3C = 15, IN_4C = 2;
 const int POT_PIN = 34;
@@ -38,8 +38,8 @@ const int BUT_PIN = 19;
 // OBJECTS
 // ============================================================================
 Motor hinge1(IN_1A, IN_2A);
-// Motor L12(IN_1B, IN_2B);
-// Motor R56(IN_3B, IN_4B);
+Motor L12(IN_1B, IN_2B);
+Motor R56(IN_3B, IN_4B);
 // Motor L34(IN_3C, IN_4C);
 // Motor R78(IN_1C, IN_2C);
 
@@ -76,6 +76,8 @@ void setup() {
   delay(1000);
 
   setupMotor(hinge1);
+  setupMotor(L12);
+  setupMotor(R56);
   pinMode(EN_PIN, INPUT_PULLDOWN);
   pinMode(BUT_PIN, INPUT_PULLDOWN);
 
@@ -126,8 +128,14 @@ void loop() {
     } else {
       stopMotor(hinge1);
     }
+
+    Serial.print("Current: "); Serial.println(curAngle);
+    Serial.print("Set: "); Serial.println(setAngle);
+    Serial.print("Output: "); Serial.println(output);
     
     lastPIDUpdate = now;
+
+    // turnLeft(256);
   }
   
   // ========== MEDIUM PRIORITY: SENSOR READING (runs every 50ms) ==========
@@ -169,6 +177,13 @@ void onTriggerReceived(const esp_now_recv_info_t *info, const uint8_t *data, int
 // ============================================================================
 // MOTOR CONTROL FUNCTIONS
 // ============================================================================
+void turnLeft(int speed){
+  // hingeUp(speed/2, L34);
+  hingeDown(speed/2, L12);
+  hingeUp(speed, R56);
+  // hingeUp(speed, R78);
+}
+
 void hingeUp(int motorSpeed, Motor &motorName) {
   analogWrite(motorName.in1, motorSpeed);
   analogWrite(motorName.in2, 0);
@@ -177,6 +192,13 @@ void hingeUp(int motorSpeed, Motor &motorName) {
 void hingeDown(int motorSpeed, Motor &motorName) {
   analogWrite(motorName.in1, 0);
   analogWrite(motorName.in2, motorSpeed);
+}
+
+void stopRobot(){
+  // stopMotor(L34);
+  stopMotor(L12);
+  stopMotor(R56);
+  // stopMotor(R78);
 }
 
 void stopMotor(Motor &motorName) {
@@ -195,8 +217,8 @@ void setupMotor(Motor &m) {
 // PID SETUP
 // ============================================================================
 void myPidSetup(PIDController *pid) {
-  pid->Kp = 5.0f;
-  pid->Ki = 0.50f;
+  pid->Kp = 2.0f;
+  pid->Ki = 0.0f;
   pid->Kd = 0.0f;
   pid->tau = 0.02f;
   pid->T = 0.01f;

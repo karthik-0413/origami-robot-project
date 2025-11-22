@@ -1,0 +1,2 @@
+timestamp,sensor_id,IR1,IR2,IR3,accelX,accelY,accelZ,gyroX,gyroY,gyroZ
+1763770981.6895797,sensor1,0,0,0,0.939,-0.098,9.735,0.129,-0.041,0.004

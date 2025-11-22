@@ -2,6 +2,7 @@
 Stereo Camera Display - Receives images from ESP32 receiver via UDP
 Displays Camera 1 and Camera 2 side-by-side in real-time
 Saves images to disk
+Measures decode latency
 """
 
 import socket
@@ -33,6 +34,9 @@ image_sizes = {1: 0, 2: 0}
 last_display_time = {1: 0, 2: 0}
 fps_counters = {1: [], 2: []}
 image_counters = {1: 0, 2: 0}  # Count saved images
+
+# ⭐ NEW: Decode time tracking
+decode_times = {1: [], 2: []}
 
 # Create UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -82,10 +86,6 @@ def save_image(camera_id, img_bgr, img_rgb):
                                 f"cam{camera_id}_{timestamp}_{image_counters[camera_id]:04d}.jpg")
     cv2.imwrite(jpg_filename, img_bgr)
     
-    # Optionally save as PNG (lossless, for processing)
-    # png_filename = jpg_filename.replace('.jpg', '.png')
-    # cv2.imwrite(png_filename, img_bgr)
-    
     print(f"💾 Saved: {jpg_filename}")
 
 def process_packet(data):
@@ -121,14 +121,37 @@ def process_packet(data):
         if len(img_data) > 0:
             try:
                 img_array = np.frombuffer(img_data, dtype=np.uint8)
+                
+                # ⭐ START TIMING DECODE
+                decode_start = time.time()
+                
                 img_bgr = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+                
+                # ⭐ END TIMING DECODE
+                decode_end = time.time()
+                decode_time_ms = (decode_end - decode_start) * 1000
+                
                 if img_bgr is not None:
+                    # ⭐ RECORD DECODE TIME
+                    decode_times[camera_id].append(decode_time_ms)
+                    
+                    # Print decode time
+                    print(f"[Camera {camera_id}] Decode: {decode_time_ms:.1f} ms", end="")
+                    
+                    # Print rolling average every 10 images
+                    if len(decode_times[camera_id]) >= 10:
+                        avg_decode = np.mean(decode_times[camera_id][-10:])
+                        print(f" | Avg (last 10): {avg_decode:.1f} ms", end="")
+                    
+                    print()  # New line
+                    
                     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
                     
                     # Save the image
                     save_image(camera_id, img_bgr, img_rgb)
                     
                     return camera_id, img_rgb
+                    
             except Exception as e:
                 print(f"❌ Error decoding Camera {camera_id}: {e}")
     
@@ -180,6 +203,26 @@ except KeyboardInterrupt:
     print(f"📊 Total images saved:")
     print(f"   Camera 1: {image_counters[1]} images")
     print(f"   Camera 2: {image_counters[2]} images")
+    
+    # ⭐ PRINT DECODE TIME STATISTICS
+    print(f"\n⏱️  Decode Time Statistics:")
+    if len(decode_times[1]) > 0:
+        avg1 = np.mean(decode_times[1])
+        min1 = np.min(decode_times[1])
+        max1 = np.max(decode_times[1])
+        print(f"   Camera 1: Avg={avg1:.1f}ms, Min={min1:.1f}ms, Max={max1:.1f}ms")
+    if len(decode_times[2]) > 0:
+        avg2 = np.mean(decode_times[2])
+        min2 = np.min(decode_times[2])
+        max2 = np.max(decode_times[2])
+        print(f"   Camera 2: Avg={avg2:.1f}ms, Min={min2:.1f}ms, Max={max2:.1f}ms")
+    
+    # Combined average
+    all_times = decode_times[1] + decode_times[2]
+    if len(all_times) > 0:
+        overall_avg = np.mean(all_times)
+        print(f"   Overall Average: {overall_avg:.1f}ms")
+        
 finally:
     sock.close()
     print("✅ Socket closed. Goodbye!")
