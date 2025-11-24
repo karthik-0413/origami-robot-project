@@ -39,7 +39,7 @@ void handleUDPPackets() {
     const uint8_t *payload = &packet[5];
     int payloadLen = len-5;
 
-    ImageBuffer *ib = (camera_id==1)?&buf1:&buf2;
+    ::ImageBuffer *ib = (camera_id==1)?&buf1:&buf2;
     if(ib->img_id==0 || ib->total_chunks==0){
         if(!ib->allocChunks(total)) return;
         ib->camera_id=camera_id;
@@ -179,12 +179,12 @@ void handleJetsonSerial() {
         unsigned long jetson_timestamp_us = parseTimestamp(timestamp);
         
         // Parse position command
-        positionCmd.linear_x = parts[1].toFloat();
-        positionCmd.linear_y = parts[2].toFloat();
-        positionCmd.linear_z = parts[3].toFloat();
-        positionCmd.angular_x = parts[4].toFloat();
-        positionCmd.angular_y = parts[5].toFloat();
-        positionCmd.angular_z = parts[6].toFloat();
+        ::positionCmd.linear_x = parts[1].toFloat();
+        ::positionCmd.linear_y = parts[2].toFloat();
+        ::positionCmd.linear_z = parts[3].toFloat();
+        ::positionCmd.angular_x = parts[4].toFloat();
+        ::positionCmd.angular_y = parts[5].toFloat();
+        ::positionCmd.angular_z = parts[6].toFloat();
         
         // Parse hinge commands (both hinges)
         uint8_t hinge1_id = parts[7].toInt();
@@ -210,14 +210,14 @@ void handleJetsonSerial() {
         
         // Forward hinge commands to respective senders
         if (hinge1_id == 1 || hinge1_id == 2) {
-            hingeCmd.hingeID = hinge1_id;
-            hingeCmd.targetAngle = hinge1_angle;
+            ::hingeCmd.hingeID = hinge1_id;
+            ::hingeCmd.targetAngle = hinge1_angle;
             forwardHingeToSender(hinge1_id);
         }
         
         if (hinge2_id == 1 || hinge2_id == 2) {
-            hingeCmd.hingeID = hinge2_id;
-            hingeCmd.targetAngle = hinge2_angle;
+            ::hingeCmd.hingeID = hinge2_id;
+            ::hingeCmd.targetAngle = hinge2_angle;
             forwardHingeToSender(hinge2_id);
         }
     }
@@ -271,24 +271,24 @@ void sendSensorDataToJetson() {
     Serial.print(microseconds); Serial.print(",");
     
     // All 6 IR sensors
-    Serial.print(packet1.sensor1); Serial.print(",");
-    Serial.print(packet1.sensor2); Serial.print(",");
-    Serial.print(packet1.sensor3); Serial.print(",");
-    Serial.print(packet2.sensor4); Serial.print(",");
-    Serial.print(packet2.sensor5); Serial.print(",");
-    Serial.print(packet2.sensor6); Serial.print(",");
+    Serial.print(::packet1.sensor1); Serial.print(",");
+    Serial.print(::packet1.sensor2); Serial.print(",");
+    Serial.print(::packet1.sensor3); Serial.print(",");
+    Serial.print(::packet2.sensor4); Serial.print(",");
+    Serial.print(::packet2.sensor5); Serial.print(",");
+    Serial.print(::packet2.sensor6); Serial.print(",");
     
     // All IMU data (from Sender 1 only)
-    Serial.print(packet1.accelX, 3); Serial.print(",");
-    Serial.print(packet1.accelY, 3); Serial.print(",");
-    Serial.print(packet1.accelZ, 3); Serial.print(",");
-    Serial.print(packet1.gyroX, 3); Serial.print(",");
-    Serial.print(packet1.gyroY, 3); Serial.print(",");
-    Serial.print(packet1.gyroZ, 3); Serial.print(",");
+    Serial.print(::packet1.accelX, 3); Serial.print(",");
+    Serial.print(::packet1.accelY, 3); Serial.print(",");
+    Serial.print(::packet1.accelZ, 3); Serial.print(",");
+    Serial.print(::packet1.gyroX, 3); Serial.print(",");
+    Serial.print(::packet1.gyroY, 3); Serial.print(",");
+    Serial.print(::packet1.gyroZ, 3); Serial.print(",");
     
     // Both hinge angles
-    Serial.print(packet1.currentHingeAngle, 2); Serial.print(",");
-    Serial.print(packet2.currentHingeAngle, 2); Serial.print(",");
+    Serial.print(::packet1.currentHingeAngle, 2); Serial.print(",");
+    Serial.print(::packet2.currentHingeAngle, 2); Serial.print(",");
     
     Serial.println("END");  // END marker
 }
@@ -297,9 +297,9 @@ void forwardPositionToSenders() {
     // Send position command to BOTH senders via ESP-NOW
     
     // Create packet with identifier byte
-    uint8_t posPacket[sizeof(PositionCommand) + 1];
+    uint8_t posPacket[sizeof(::PositionCommand) + 1];
     posPacket[0] = 0xAA;  // Position command identifier
-    memcpy(&posPacket[1], &positionCmd, sizeof(PositionCommand));
+    memcpy(&posPacket[1], &::positionCmd, sizeof(::PositionCommand));
     
     // Send to both senders
     esp_err_t result1 = esp_now_send(sender1MAC, posPacket, sizeof(posPacket));
@@ -316,9 +316,9 @@ void forwardHingeToSender(uint8_t hingeID) {
     // Send hinge command to SPECIFIC sender via ESP-NOW
     
     // Create packet with identifier byte
-    uint8_t hingePacket[sizeof(HingeCommand) + 1];
+    uint8_t hingePacket[sizeof(::HingeCommand) + 1];
     hingePacket[0] = 0xBB;  // Hinge command identifier
-    memcpy(&hingePacket[1], &hingeCmd, sizeof(HingeCommand));
+    memcpy(&hingePacket[1], &::hingeCmd, sizeof(::HingeCommand));
     
     // Determine which sender to send to
     uint8_t *targetMAC = (hingeID == 1) ? sender1MAC : sender2MAC;

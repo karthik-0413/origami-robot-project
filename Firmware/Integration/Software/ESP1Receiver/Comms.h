@@ -5,6 +5,8 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <esp_now.h>
+#include "ImageBuffer.h"
+#include "Sensors.h"
 
 #define WIFI_SSID "GL-MT3000-8d3"
 #define WIFI_PASSWORD "QYAXW83ASS"
@@ -22,7 +24,7 @@ namespace Comms {
     void registerCallback();
     void handleUDPPackets();
     void sendTriggerToSenders();
-    void forwardImageToLaptop(class ImageBuffer &);
+    void forwardImageToLaptop(ImageBuffer &ib);
     
     // ⭐ NEW: Jetson communication functions
     void handleJetsonSerial();        // Read commands from Jetson
