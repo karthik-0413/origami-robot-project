@@ -8,13 +8,13 @@ struct SensorPacket1 {
     bool sensor1, sensor2, sensor3;
     float accelX, accelY, accelZ;
     float gyroX, gyroY, gyroZ;
-    float currentHingeAngle;  // ⭐ NEW: Current hinge angle from sender
+    // float currentHingeAngle;  // ⭐ NEW: Current hinge angle from sender
 };
 
 // Sensor data from Sender 2 (Camera 2)
 struct SensorPacket2 {
     bool sensor4, sensor5, sensor6;
-    float currentHingeAngle;  // ⭐ NEW: Current hinge angle from sender
+    // float currentHingeAngle;  // ⭐ NEW: Current hinge angle from sender
 };
 
 // ⭐ NEW: Position command from Jetson

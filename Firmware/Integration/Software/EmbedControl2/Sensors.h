@@ -16,11 +16,33 @@
 // #define LOX4_ADDRESS 0x47       // I2C address for sensor 4
 
 // ---------- Sensor Data Structure ----------
-typedef struct {
-  bool sensor4, sensor5, sensor6; //, sensor8;   // Proximity flags for 4 VL53L0X sensors
-} SensorPacket;
+// Sensor data to send to receiver
+struct SensorPacket {
+    bool sensor4, sensor5, sensor6;
+    // float currentHingeAngle;  // ⭐ NEW: Current hinge angle
+};
 
-extern SensorPacket sensorData;              // Global sensor data object
+// ⭐ NEW: Position command from Jetson (via receiver)
+struct PositionCommand {
+    float linear_x;   // Forward/backward
+    float linear_y;   // Left/right (strafe)
+    float linear_z;   // Up/down
+    float angular_x;  // Roll
+    float angular_y;  // Pitch
+    float angular_z;  // Yaw (turn)
+};
+
+// ⭐ NEW: Hinge command from Jetson (via receiver)
+struct HingeCommand {
+    uint8_t hingeID;     // Which hinge (1 or 2)
+    float targetAngle;   // Desired angle in degrees
+};
+
+extern TwoWire I2C_SENSORS;
+extern Adafruit_VL53L0X lox1, lox2, lox3;
+extern SensorPacket sensorData;
+extern PositionCommand positionCmd;
+extern HingeCommand hingeCmd;
 
 // ---------- Sensor Functions ----------
 void initVL53L0X();        // Initialize 4 VL53L0X sensors with unique addresses

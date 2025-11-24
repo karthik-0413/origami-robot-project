@@ -49,6 +49,8 @@ PIDController hingePID;
 // GLOBALS
 // ============================================================================
 volatile bool triggerReceived = false;
+volatile bool positionCmdReceived = false;  // ⭐ NEW
+volatile bool hingeCmdReceived = false;     // ⭐ NEW
 uint8_t ackMsg = 1;
 float setAngle = 0.0;
 float curAngle = 0.0;
@@ -67,6 +69,9 @@ void hingeDown(int, Motor &);
 void stopMotor(Motor &);
 void setupMotor(Motor &);
 void onTriggerReceived(const esp_now_recv_info_t *, const uint8_t *, int);
+void handlePositionCommand();   // ⭐ NEW
+void handleHingeCommand();      // ⭐ NEW
+void executeMotorCommands(float linearX, float linearY, float angularZ);  // ⭐ NEW
 
 // ============================================================================
 // SETUP
@@ -129,9 +134,9 @@ void loop() {
       stopMotor(hinge1);
     }
 
-    Serial.print("Current: "); Serial.println(curAngle);
-    Serial.print("Set: "); Serial.println(setAngle);
-    Serial.print("Output: "); Serial.println(output);
+    // Serial.print("Current: "); Serial.println(curAngle);
+    // Serial.print("Set: "); Serial.println(setAngle);
+    // Serial.print("Output: "); Serial.println(output);
     
     lastPIDUpdate = now;
 
@@ -165,13 +170,116 @@ void loop() {
 }
 
 // ============================================================================
-// ESP-NOW CALLBACK
+// ⭐ NEW: ESP-NOW CALLBACK - Enhanced to handle multiple packet types
 // ============================================================================
 void onTriggerReceived(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
-  if (len == 1 && data[0] == 1) {
-    // Serial.print("Received");
+  if (len == 0) return;
+  
+  // Check first byte for packet type identifier
+  uint8_t packetType = data[0];
+  
+  if (len == 1 && packetType == 1) {
+    // ========== TRIGGER MESSAGE ==========
     triggerReceived = true;
   }
+  else if (packetType == 0xAA && len == sizeof(PositionCommand) + 1) {
+    // ========== POSITION COMMAND ==========
+    memcpy(&positionCmd, &data[1], sizeof(PositionCommand));
+    positionCmdReceived = true;
+    
+    Serial.println("Position command received");
+    Serial.printf("  Linear: X=%.2f Y=%.2f Z=%.2f\n", 
+                  positionCmd.linear_x, positionCmd.linear_y, positionCmd.linear_z);
+    Serial.printf("  Angular: X=%.2f Y=%.2f Z=%.2f\n", 
+                  positionCmd.angular_x, positionCmd.angular_y, positionCmd.angular_z);
+  }
+  else if (packetType == 0xBB && len == sizeof(HingeCommand) + 1) {
+    // ========== HINGE COMMAND ==========
+    memcpy(&hingeCmd, &data[1], sizeof(HingeCommand));
+    hingeCmdReceived = true;
+    
+    Serial.printf("Hinge command received: ID=%d, Angle=%.2f\n", 
+                  hingeCmd.hingeID, hingeCmd.targetAngle);
+  }
+}
+
+// ============================================================================
+// ⭐ NEW: Handle Position Command
+// ============================================================================
+void handlePositionCommand() {
+  // Extract velocity commands
+  float linearX = positionCmd.linear_x;   // Forward/backward
+  float linearY = positionCmd.linear_y;   // Strafe left/right
+  float angularZ = positionCmd.angular_z; // Turn (yaw)
+  
+  // Execute motor commands based on position
+  executeMotorCommands(linearX, linearY, angularZ);
+  
+  Serial.printf("Executing: FWD=%.2f, STRAFE=%.2f, TURN=%.2f\n", 
+                linearX, linearY, angularZ);
+}
+
+// ============================================================================
+// ⭐ NEW: Handle Hinge Command
+// ============================================================================
+void handleHingeCommand() {
+  // Check if this command is for our hinge
+  // Assuming CAMERA_ID determines hinge ID (1 or 2)
+  if (hingeCmd.hingeID == CAMERA_ID) {
+    // Update setpoint for PID controller
+    setAngle = hingeCmd.targetAngle;
+    
+    Serial.printf("Setting hinge %d to %.2f degrees\n", 
+                  hingeCmd.hingeID, hingeCmd.targetAngle);
+  } else {
+    Serial.printf("Hinge command for ID %d ignored (I am ID %d)\n", 
+                  hingeCmd.hingeID, CAMERA_ID);
+  }
+}
+
+// ============================================================================
+// ⭐ NEW: Execute Motor Commands (Mecanum/Omnidirectional Drive)
+// ============================================================================
+void executeMotorCommands(float linearX, float linearY, float angularZ) {
+  // Convert velocity commands to motor speeds
+  // This is for a 4-wheel mecanum drive or similar
+  
+  // Scale factors (tune these based on your robot)
+  const float LINEAR_SCALE = 200.0;   // Max speed for linear motion
+  const float ANGULAR_SCALE = 150.0;  // Max speed for rotation
+  
+  // Calculate individual wheel speeds
+  // For mecanum drive:
+  // Front-left  = linearX - linearY - angularZ
+  // Front-right = linearX + linearY + angularZ
+  // Rear-left   = linearX + linearY - angularZ
+  // Rear-right  = linearX - linearY + angularZ
+  
+  int speedL12 = (int)((linearX - linearY - angularZ) * LINEAR_SCALE);
+  int speedR56 = (int)((linearX + linearY + angularZ) * LINEAR_SCALE);
+  
+  // Clamp speeds to valid PWM range
+  speedL12 = constrain(speedL12, -255, 255);
+  speedR56 = constrain(speedR56, -255, 255);
+  
+  // Apply motor commands
+  if (speedL12 > 0) {
+    hingeUp(speedL12, L12);
+  } else if (speedL12 < 0) {
+    hingeDown(abs(speedL12), L12);
+  } else {
+    stopMotor(L12);
+  }
+  
+  if (speedR56 > 0) {
+    hingeUp(speedR56, R56);
+  } else if (speedR56 < 0) {
+    hingeDown(abs(speedR56), R56);
+  } else {
+    stopMotor(R56);
+  }
+  
+  Serial.printf("Motor speeds: L12=%d, R56=%d\n", speedL12, speedR56);
 }
 
 // ============================================================================

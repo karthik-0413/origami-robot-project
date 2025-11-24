@@ -6,6 +6,8 @@ TwoWire I2C_SENSORS = TwoWire(1);
 
 Adafruit_VL53L0X lox1, lox2, lox3; //, lox4;
 SensorPacket sensorData;
+PositionCommand positionCmd = {0, 0, 0, 0, 0, 0};  // ⭐ NEW
+HingeCommand hingeCmd = {0, 0};                     // ⭐ NEW
 
 void initVL53L0X() {
   // Initialize sensor I2C bus on GPIO 25/26

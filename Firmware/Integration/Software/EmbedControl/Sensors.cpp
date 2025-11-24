@@ -125,7 +125,7 @@ void readVL53L0X() {
   // sensorData.timestamp = localtime();
   // sensorData.sensor4 = results[3];
 
-  // Serial.print("IR1: "); Serial.println(sensorData.sensor1);
-  // Serial.print("IR2: "); Serial.println(sensorData.sensor2);
-  // Serial.print("IR3: "); Serial.println(sensorData.sensor3);
+  Serial.print("IR1: "); Serial.println(sensorData.sensor1);
+  Serial.print("IR2: "); Serial.println(sensorData.sensor2);
+  Serial.print("IR3: "); Serial.println(sensorData.sensor3);
 }

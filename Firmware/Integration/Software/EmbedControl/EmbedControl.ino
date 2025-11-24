@@ -122,7 +122,7 @@ void loop() {
   if (now - lastPIDUpdate >= 1) {
     curAngle = updateEncoder();
 
-    sensorData.currentHingeAngle = curAngle;  // ⭐ NEW
+    // sensorData.currentHingeAngle = curAngle;  // ⭐ NEW
 
     int potValue = analogRead(POT_PIN);
     setAngle = (potValue - 2048) / 4096.0 * 360.0;

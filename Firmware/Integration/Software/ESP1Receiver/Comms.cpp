@@ -287,8 +287,8 @@ void sendSensorDataToJetson() {
     Serial.print(::packet1.gyroZ, 3); Serial.print(",");
     
     // Both hinge angles
-    Serial.print(::packet1.currentHingeAngle, 2); Serial.print(",");
-    Serial.print(::packet2.currentHingeAngle, 2); Serial.print(",");
+    // Serial.print(::packet1.currentHingeAngle, 2); Serial.print(",");
+    // Serial.print(::packet2.currentHingeAngle, 2); Serial.print(",");
     
     Serial.println("END");  // END marker
 }
