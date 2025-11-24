@@ -145,78 +145,152 @@ void forwardImageToLaptop(ImageBuffer &ib) {
 
 void handleJetsonSerial() {
     // Read incoming commands from Jetson via Serial
+    // Format: SS:MMM:UUU,LinearX,Y,Z,AngularX,Y,Z,ID1,Angle1,ID2,Angle2,END
+    
     if (Serial.available() > 0) {
         String line = Serial.readStringUntil('\n');
         line.trim();
         
-        // Parse different command types
-        // Format: "POS,lx,ly,lz,ax,ay,az" or "HINGE,id,angle"
+        // Split by commas
+        int parts_count = 0;
+        String parts[13];  // timestamp + 6 position + 4 hinge + END = 12 parts
         
-        if (line.startsWith("POS,")) {
-            // Position command
-            // Format: POS,linear_x,linear_y,linear_z,angular_x,angular_y,angular_z
-            int idx = 4; // Skip "POS,"
-            
-            int comma1 = line.indexOf(',', idx);
-            int comma2 = line.indexOf(',', comma1 + 1);
-            int comma3 = line.indexOf(',', comma2 + 1);
-            int comma4 = line.indexOf(',', comma3 + 1);
-            int comma5 = line.indexOf(',', comma4 + 1);
-            
-            if (comma1 > 0 && comma2 > 0 && comma3 > 0 && comma4 > 0 && comma5 > 0) {
-                positionCmd.linear_x = line.substring(idx, comma1).toFloat();
-                positionCmd.linear_y = line.substring(comma1 + 1, comma2).toFloat();
-                positionCmd.linear_z = line.substring(comma2 + 1, comma3).toFloat();
-                positionCmd.angular_x = line.substring(comma3 + 1, comma4).toFloat();
-                positionCmd.angular_y = line.substring(comma4 + 1, comma5).toFloat();
-                positionCmd.angular_z = line.substring(comma5 + 1).toFloat();
-                
-                Serial.println("Position command received");
-                
-                // Forward to both senders
-                forwardPositionToSenders();
+        int start = 0;
+        for (int i = 0; i < 13; i++) {
+            int comma = line.indexOf(',', start);
+            if (comma == -1) {
+                parts[i] = line.substring(start);
+                parts_count = i + 1;
+                break;
             }
+            parts[i] = line.substring(start, comma);
+            start = comma + 1;
+            parts_count++;
         }
-        else if (line.startsWith("HINGE,")) {
-            // Hinge command
-            // Format: HINGE,id,angle
-            int comma1 = line.indexOf(',', 6);
-            
-            if (comma1 > 0) {
-                hingeCmd.hingeID = line.substring(6, comma1).toInt();
-                hingeCmd.targetAngle = line.substring(comma1 + 1).toFloat();
-                
-                Serial.printf("Hinge command: ID=%d, Angle=%.2f\n", 
-                             hingeCmd.hingeID, hingeCmd.targetAngle);
-                
-                // Forward to specific sender
-                forwardHingeToSender(hingeCmd.hingeID);
-            }
+        
+        // Validate format: Should have 12 parts + END marker
+        if (parts_count != 12 || parts[11] != "END") {
+            Serial.println("❌ Invalid format: Expected SS:MMM:UUU,lx,ly,lz,ax,ay,az,id1,ang1,id2,ang2,END");
+            return;
+        }
+        
+        // Parse timestamp
+        String timestamp = parts[0];
+        unsigned long jetson_timestamp_us = parseTimestamp(timestamp);
+        
+        // Parse position command
+        positionCmd.linear_x = parts[1].toFloat();
+        positionCmd.linear_y = parts[2].toFloat();
+        positionCmd.linear_z = parts[3].toFloat();
+        positionCmd.angular_x = parts[4].toFloat();
+        positionCmd.angular_y = parts[5].toFloat();
+        positionCmd.angular_z = parts[6].toFloat();
+        
+        // Parse hinge commands (both hinges)
+        uint8_t hinge1_id = parts[7].toInt();
+        float hinge1_angle = parts[8].toFloat();
+        uint8_t hinge2_id = parts[9].toInt();
+        float hinge2_angle = parts[10].toFloat();
+        
+        // Calculate latency
+        unsigned long esp_timestamp_us = micros();
+        long latency_us = esp_timestamp_us - jetson_timestamp_us;
+        
+        // Print received command
+        // Serial.printf("📥 Command received [%s] Latency: %.3fms\n", 
+        //              timestamp.c_str(), latency_us / 1000.0);
+        // Serial.printf("   Position: L(%.2f,%.2f,%.2f) A(%.2f,%.2f,%.2f)\n",
+        //              positionCmd.linear_x, positionCmd.linear_y, positionCmd.linear_z,
+        //              positionCmd.angular_x, positionCmd.angular_y, positionCmd.angular_z);
+        // Serial.printf("   Hinges: [%d]=%.2f° [%d]=%.2f°\n",
+        //              hinge1_id, hinge1_angle, hinge2_id, hinge2_angle);
+        
+        // Forward position to both senders
+        forwardPositionToSenders();
+        
+        // Forward hinge commands to respective senders
+        if (hinge1_id == 1 || hinge1_id == 2) {
+            hingeCmd.hingeID = hinge1_id;
+            hingeCmd.targetAngle = hinge1_angle;
+            forwardHingeToSender(hinge1_id);
+        }
+        
+        if (hinge2_id == 1 || hinge2_id == 2) {
+            hingeCmd.hingeID = hinge2_id;
+            hingeCmd.targetAngle = hinge2_angle;
+            forwardHingeToSender(hinge2_id);
         }
     }
 }
 
+// ⭐ NEW: Helper function to parse SS:MMM:UUU timestamp
+unsigned long parseTimestamp(String timestamp_str) {
+    // Parse timestamp in format SS:MMM:UUU
+    // Returns total microseconds
+    
+    int colon1 = timestamp_str.indexOf(':');
+    int colon2 = timestamp_str.indexOf(':', colon1 + 1);
+    
+    if (colon1 <= 0 || colon2 <= 0) {
+        return 0;
+    }
+    
+    unsigned long seconds = timestamp_str.substring(0, colon1).toInt();
+    unsigned long milliseconds = timestamp_str.substring(colon1 + 1, colon2).toInt();
+    unsigned long microseconds = timestamp_str.substring(colon2 + 1).toInt();
+    
+    // Convert to total microseconds
+    unsigned long total_us = (seconds * 1000000UL) + (milliseconds * 1000UL) + microseconds;
+    
+    return total_us;
+}
+
 void sendSensorDataToJetson() {
-    // Send sensor data back to Jetson
-    // Format: SENSOR1,ir1,ir2,ir3,ax,ay,az,gx,gy,gz,hinge
-    Serial.print("SENSOR1,");
+    // ⭐ NEW FORMAT: Timestamp as SS:MMM:UUU (seconds:milliseconds:microseconds)
+    // Format: SS:MMM:UUU,IR1,IR2,IR3,IR4,IR5,IR6,AccX,AccY,AccZ,GyroX,GyroY,GyroZ,Hinge1,Hinge2,END
+    
+    // Get timestamp in microseconds since boot
+    unsigned long micros_total = micros();
+    
+    // Convert to seconds:milliseconds:microseconds format
+    unsigned long seconds = micros_total / 1000000;
+    unsigned long milliseconds = (micros_total / 1000) % 1000;
+    unsigned long microseconds = micros_total % 1000;
+    
+    // Print timestamp as SS:MMM:UUU
+    Serial.print(seconds); Serial.print(":");
+    
+    // Pad milliseconds to 3 digits
+    if (milliseconds < 100) Serial.print("0");
+    if (milliseconds < 10) Serial.print("0");
+    Serial.print(milliseconds); Serial.print(":");
+    
+    // Pad microseconds to 3 digits
+    if (microseconds < 100) Serial.print("0");
+    if (microseconds < 10) Serial.print("0");
+    Serial.print(microseconds); Serial.print(",");
+    
+    // All 6 IR sensors
     Serial.print(packet1.sensor1); Serial.print(",");
     Serial.print(packet1.sensor2); Serial.print(",");
     Serial.print(packet1.sensor3); Serial.print(",");
+    Serial.print(packet2.sensor4); Serial.print(",");
+    Serial.print(packet2.sensor5); Serial.print(",");
+    Serial.print(packet2.sensor6); Serial.print(",");
+    
+    // All IMU data (from Sender 1 only)
     Serial.print(packet1.accelX, 3); Serial.print(",");
     Serial.print(packet1.accelY, 3); Serial.print(",");
     Serial.print(packet1.accelZ, 3); Serial.print(",");
     Serial.print(packet1.gyroX, 3); Serial.print(",");
     Serial.print(packet1.gyroY, 3); Serial.print(",");
     Serial.print(packet1.gyroZ, 3); Serial.print(",");
-    Serial.println(packet1.currentHingeAngle, 2);
     
-    // Format: SENSOR2,ir4,ir5,ir6,hinge
-    Serial.print("SENSOR2,");
-    Serial.print(packet2.sensor4); Serial.print(",");
-    Serial.print(packet2.sensor5); Serial.print(",");
-    Serial.print(packet2.sensor6); Serial.print(",");
-    Serial.println(packet2.currentHingeAngle, 2);
+    // Both hinge angles
+    Serial.print(packet1.currentHingeAngle, 2); Serial.print(",");
+    Serial.print(packet2.currentHingeAngle, 2); Serial.print(",");
+    
+    Serial.println("END");  // END marker
 }
 
 void forwardPositionToSenders() {

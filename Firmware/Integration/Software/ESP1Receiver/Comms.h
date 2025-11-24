@@ -29,6 +29,7 @@ namespace Comms {
     void sendSensorDataToJetson();    // Send sensor data to Jetson
     void forwardPositionToSenders();  // Send position cmd to both senders
     void forwardHingeToSender(uint8_t hingeID);  // Send hinge cmd to specific sender
+    unsigned long parseTimestamp(String timestamp_str);  // ⭐ NEW
 }
 
 #endif
