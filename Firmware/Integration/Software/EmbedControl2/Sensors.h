@@ -19,7 +19,7 @@
 // Sensor data to send to receiver
 struct SensorPacket {
     bool sensor4, sensor5, sensor6;
-    // float currentHingeAngle;  // ⭐ NEW: Current hinge angle
+    float currentHingeAngle;  // ⭐ NEW: Current hinge angle
 };
 
 // ⭐ NEW: Position command from Jetson (via receiver)

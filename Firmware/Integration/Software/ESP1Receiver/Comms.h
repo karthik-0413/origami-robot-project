@@ -11,7 +11,7 @@
 #define WIFI_SSID "GL-MT3000-8d3"
 #define WIFI_PASSWORD "QYAXW83ASS"
 #define IMAGE_PORT 8888
-#define LAPTOP_IP "192.168.8.100"
+#define LAPTOP_IP "192.168.8.105"
 #define LAPTOP_PORT 9999
 
 namespace Comms {

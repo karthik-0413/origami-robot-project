@@ -111,7 +111,7 @@ void forwardImageToLaptop(ImageBuffer &ib) {
     
     // Send image to laptop via UDP
     // Format: [camera_id][img_size_high][img_size_low][image_data]
-    const size_t HEADER_SIZE = 3;
+    const size_t HEADER_SIZE = 5;
     const size_t MAX_UDP_SIZE = 1400;
     const size_t MAX_PAYLOAD = MAX_UDP_SIZE - HEADER_SIZE;
     
@@ -125,6 +125,8 @@ void forwardImageToLaptop(ImageBuffer &ib) {
         packet[0] = ib.camera_id;
         packet[1] = (totalSize >> 8) & 0xFF;
         packet[2] = totalSize & 0xFF;
+        packet[3] = pkt;
+        packet[4] = numPackets;
         memcpy(packet + HEADER_SIZE, imageData + chunkStart, chunkSize);
         
         udpClient.beginPacket(LAPTOP_IP, LAPTOP_PORT);
@@ -197,13 +199,13 @@ void handleJetsonSerial() {
         long latency_us = esp_timestamp_us - jetson_timestamp_us;
         
         // Print received command
-        // Serial.printf("📥 Command received [%s] Latency: %.3fms\n", 
-        //              timestamp.c_str(), latency_us / 1000.0);
-        // Serial.printf("   Position: L(%.2f,%.2f,%.2f) A(%.2f,%.2f,%.2f)\n",
-        //              positionCmd.linear_x, positionCmd.linear_y, positionCmd.linear_z,
-        //              positionCmd.angular_x, positionCmd.angular_y, positionCmd.angular_z);
-        // Serial.printf("   Hinges: [%d]=%.2f° [%d]=%.2f°\n",
-        //              hinge1_id, hinge1_angle, hinge2_id, hinge2_angle);
+        Serial.printf("📥 Command received [%s] Latency: %.3fms\n", 
+                     timestamp.c_str(), latency_us / 1000.0);
+        Serial.printf("   Position: L(%.2f,%.2f,%.2f) A(%.2f,%.2f,%.2f)\n",
+                     positionCmd.linear_x, positionCmd.linear_y, positionCmd.linear_z,
+                     positionCmd.angular_x, positionCmd.angular_y, positionCmd.angular_z);
+        Serial.printf("   Hinges: [%d]=%.2f° [%d]=%.2f°\n",
+                     hinge1_id, hinge1_angle, hinge2_id, hinge2_angle);
         
         // Forward position to both senders
         forwardPositionToSenders();
@@ -287,8 +289,8 @@ void sendSensorDataToJetson() {
     Serial.print(::packet1.gyroZ, 3); Serial.print(",");
     
     // Both hinge angles
-    // Serial.print(::packet1.currentHingeAngle, 2); Serial.print(",");
-    // Serial.print(::packet2.currentHingeAngle, 2); Serial.print(",");
+    Serial.print(::packet1.currentHingeAngle, 2); Serial.print(",");
+    Serial.print(::packet2.currentHingeAngle, 2); Serial.print(",");
     
     Serial.println("END");  // END marker
 }
